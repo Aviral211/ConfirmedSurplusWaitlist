@@ -1,0 +1,6 @@
+{
+  "name": "Confirmed Surplus Waitlist",
+  "description": "A clickable MVP prototype demonstrating confirmed surplus bakery bag distribution, waitlist queues, time-limited consumer offers, and automated reassignment.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
