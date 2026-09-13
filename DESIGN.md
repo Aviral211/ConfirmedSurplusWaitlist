@@ -1,31 +1,41 @@
-# Sunrise / confirmed surplus
+# Confirmed Surplus Waitlist: design and behavior
 
-## Product architecture
-One fictional September 9, 2026 evening at Sunrise Bakery, Bellevue. Consumer and Merchant are role previews over the same local transaction state, not authenticated accounts. Never promise a bag before a counted confirmation. One bag per customer. Joining closes when the merchant confirms.
+## Product hierarchy
 
-Keep state in a pure reducer: collecting -> allocating -> closed. Every confirmed bag is available, offered, reserved, picked up, or remaining. Offers have absolute simulated deadlines, reconciled chronologically across time jumps and reloads. Five-minute response + ten-minute arrival buffer; no new offers after 7:45 PM. Pickup closes at 8 PM. No-shows remain unsold; demo pay-at-pickup avoids invented refunds.
+Confirmed Surplus Waitlist is the software. Sunrise Bakery, Bellevue, is its fictional demo store. Keep the product identity in the shared header, role preview in the center, and simulated time on the right. Store context belongs inside each workspace. No extra admin, onboarding, location switcher or dashboard is necessary.
 
-Priority = join time minus 30 minutes per previous eligible night without an offer (maximum three). Tie-break actual join time then stable ID. Prior history is snapshotted for tonight. Credit resets on receiving an offer. Leaving, declining, expiry, and no-show do not earn credit. Earn only once when a night closes with no offer. Next-night action retains history; reset restores deterministic seeds.
+Consumer first visit: warm bakery image and an open join column. Waiting: place in the transparent queue, no promise, a quiet demo-only count handoff. Offer and reservation: remove the photo and fairness material, preserve a compact store column and bag identity, and make the decision or pickup ticket primary.
 
-## Visual system and accepted concepts
-Selected autonomously as requested: work/design/consumer-concept.png and merchant-concept.png in the parent workspace. Built-in Image Gen references, 1536 x 1024. Consumer: photo on left, open state/action column on right. Merchant: count + confirm, sparse contextual sidebar; after confirmation replace count with operational rows and activity. Results use meaningful numbers and a single proportional pickup strip, not analytics charts.
+Merchant: physical count and one confirmation. Once confirmed, replace the count with physical bag rows. Distinguish automatic allocation from pickup work. Every bag keeps its identifier across guests. Show the previous offer outcome and the new guest together. Never imply that confirmation means every bag will sell.
 
-Color lock: warm paper #f7f5ef, evergreen #244539, ink #292d28, muted #686b62, rules #d9ddd3, gentle green surface #e9eee5, caution #8a4d27. No gradients/shadows. White reserved for image/paper ticket if needed.
-Typography: Georgia serif identity/headings, system sans UI. Body 16/1.55, secondary 14/1.5, heading 48-56/1.05 desktop, 36/1.08 mobile; labels sentence case, never dense uppercase microcopy. Controls inherit font; min 44px targets. Eight-point spacing 8/16/24/32/48/64. Buttons radius 7px; image radius 2px; no nested cards. Icons lucide 20px, 1.7 stroke. Sun identity is code-native line geometry.
-Desktop max content 1180px, 48px gutters, consumer 54/46 split with 56px gap. Merchant 1120px, 60/40 split with simple divider. At <=760px single column, image becomes 16:7 at top, action immediately below; merchant grid stacks. At <=420px 20px gutters. Reduced-motion respected. Focus rings visible; state headings focus only after user navigation, live region for discrete status changes (not clock).
+## Visual system
 
-## Copy / intentional concept refinements
-Keep brand Sunrise, Consumer/Merchant tabs, Good things, still to come., Nothing promised. Nothing charged., Join tonight’s waitlist, A fairer place in line, How priority works, A good end to the day., How many bags are ready?, Confirm N bags, and Demo controls.
-Correct concept copy 'you’ll be first to hear' to 'you may receive a timed offer' to avoid guaranteed priority. Photo labeled illustrative. Merchant pickup copy says staff verify handover, rather than implying automatic physical tracking. Controls remain code-native. Add dietary/allergen caution because contents vary. Live/terminal states extend the same open layout with bounded copy and honest outcomes. Header date/clock reflect the simulated night. Mobile prioritizes state over decorative photo after joining.
+Warm paper #f7f5ef, forest green #244539, ink #292d28, muted #686b62, rules #d9ddd3, gentle green #e9eee5. Georgia identity/headings and Segoe UI/system sans controls. Modest corners, fine rules, open spacing, no gradients, glow, decorative charts or nested cards. Icons are from Lucide. Bakery photo is illustrative.
 
-## Baseline audit
-1. Join: functional visual toggle but seeded queue never changes; cramped small text, no bakery identity.
-2. Merchant: fixed quantity; multiple redundant boxes and badges.
-3. Distribution: hardcoded first three, consumer sees other people's names.
-4. Offer: timer resets on navigation; imperative parent update inside state setter.
-5. Pickup: hardcoded code and fake paid status, no actual reservation.
-6. Reassignment: static fabricated acceptances; no remaining inventory.
-Captured current original UI in parent work/before-*.png. Source inspected in full. Preserve original at branch preserve/original-main (b1d9b71).
+Primary desktop/laptop layouts: 1280–1440 wide. Merchant tablet: 1024 wide. This finishing pass does not develop or validate mobile layouts; inherited mobile rules remain.
 
-## Scope / validation
-Local React/TypeScript only. No backend, auth, payments, emails, AI or deployment. Consumer shows only own history/code and anonymous counts; merchant operational guest IDs, never fairness history. Prototype role switch is not access control. Unit tests cover allocation conservation, deadlines, cutoff, history, invalid commands, chronological jumps and results. Browser checks cover all primary/edge scenarios, responsive layouts and console health; independent critics review actual output.
+## Motion contract
+
+- Role change: 200ms entrance, no delay before controls work.
+- Count adjustment: short number transition at its real value.
+- Confirm and reassign: persistent bag number; changed recipient/status enters and briefly highlights. Progress segments represent offer, reservation and collection.
+- Offer: distinct green decision surface with live countdown. No constantly pulsing urgency.
+- Accept: pickup ticket enters in the same action column.
+- Pickup: receipt, bag state, collected count and received amount update from the same reducer action. No invented animated totals.
+- Results: actual final numbers and physical bag outcomes, with the detailed activity history collapsed by default.
+- Drawer: short entry; no interaction waits for animation. Ordinary dismissal restores trigger focus without scrolling. Scene-changing actions return to the new heading at the top.
+- prefers-reduced-motion removes animation and transitions while preserving all behavior.
+
+## Invariants
+
+Keep the existing pure reducer, browser persistence and collecting → allocating → closed architecture. A confirmation creates actual inventory once. Allocation never adds a bag. A guest receives at most one offer per evening. A decline or expiry can move only that same bag. No new offers after7:45 PM. Five minutes to respond and ten minutes to arrive; pickup7:30–8:00 PM.
+
+Priority uses deterministic effective join time:30 minutes per completed night without an offer, capped at3 credits. Tie-break actual join time, then stable ID. Credits reset on receiving an offer. Leaving, decline, expiry and missed pickup earn nothing. Next evening retains history; main-story reset explicitly restores seeded history.
+
+Reservations are unpaid. Only a valid pickup records $5 received. Invalid, duplicate and closed-window codes cannot create another pickup/payment. No-shows and unclaimed bags remain unsold. Browser-local state and presenter role controls are explicitly a simulation, not production authentication or notifications.
+
+## Review and evidence
+
+The finishing pass addresses stale priority display, wrong next-day weekday, inaccurate automation status, misleading reset copy, non-urgent offer content, weak offer prominence, sprawling results history and missing joined-state demo guidance. Independent product and visual critics reviewed the rendered result. Their material findings were pre-window pickup wording, completed-pickup action wording, and scene-changing drawer focus/scroll. These were fixed before final QA.
+
+Browser screenshots, critic notes, reduced-motion results and the final QA report are maintained outside the repository in the parent work/product-finish directory. The model suite covers conservation, chronological deadlines, cutoff, fairness, persistence, code verification, clock precision and the3claimed/2collected/$10 outcome. See README for the demo sequence and candid limits.

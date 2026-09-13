@@ -8,17 +8,20 @@ export const SELF = 'alex';
 export type Status = 'waiting' | 'offered' | 'reserved' | 'picked-up' | 'declined' | 'expired' | 'left' | 'unserved' | 'no-show';
 export type Scenario = 'standard' | 'short-demand' | 'no-demand' | 'late' | 'newcomer';
 export interface Guest { id: string; label: string; joined: number; boost: number; status: Status; offeredOnce: boolean; deadline?: number; bag?: number; code: string }
-export interface Bag { id: number; status: 'available' | 'offered' | 'reserved' | 'picked-up' | 'remaining'; guest?: string }
+export interface Bag { id: number; status: 'available' | 'offered' | 'reserved' | 'picked-up' | 'remaining'; guest?: string; previous?: {label: string; reason: 'expired'|'declined'} }
 export interface NightEvent { id: number; time: number; text: string }
 export interface Night {
   version: 1; day: number; now: number; wall: number; running: boolean; scenario: Scenario;
   phase: 'collecting' | 'allocating' | 'closed'; quantity: number; confirmed: number | null;
   guests: Guest[]; bags: Bag[]; history: Record<string, number>; events: NightEvent[]; confirmations: number; pickups: number;
+  pickupResult?: {ok: boolean; text: string; sequence: number};
 }
 export type Action =
   | { type: 'JOIN' | 'LEAVE' | 'CONFIRM' | 'NEXT_NIGHT' | 'TOGGLE_CLOCK' | 'THREE_MISSES' }
   | { type: 'QUANTITY'; value: number }
   | { type: 'ACCEPT' | 'DECLINE' | 'PICKUP'; id: string }
+  | { type: 'VERIFY_CODE'; code: string }
+  | { type: 'NEAR_EXPIRY' }
   | { type: 'ADVANCE'; to: number }
   | { type: 'TICK'; wall: number }
   | { type: 'RESET'; scenario?: Scenario; wall: number };
@@ -54,13 +57,14 @@ function allocate(n: Night) {
     bag.status='offered'; bag.guest=next.id;
     next.status='offered'; next.offeredOnce=true; next.bag=bag.id; next.deadline=n.now+OFFER_SECONDS;
     n.history[next.id]=0;
+    next.boost=0;
     log(n,`Bag ${bag.id} offered to ${next.label.toLowerCase()}. Five minutes to respond.`);
   }
 }
 function release(n: Night, g: Guest, status: 'expired'|'declined') {
   g.status=status; delete g.deadline;
   const bag=n.bags.find(b=>b.id===g.bag);
-  if(bag) {bag.status='available';delete bag.guest;}
+  if(bag) {bag.status='available';bag.previous={label:g.label,reason:status};delete bag.guest;}
   log(n,`Bag ${g.bag}: ${status==='expired'?'offer expired':'offer declined'}. ${n.now>LAST_OFFER?'Too little pickup time to offer again.':'Released for the next eligible guest.'}`);
 }
 function close(n: Night) {
@@ -93,12 +97,15 @@ export function reducer(state: Night, action: Action): Night {
   const n=structuredClone(state);
   switch(action.type) {
     case 'TICK': {
+      if(action.wall<n.wall) return state;
       const elapsed=Math.max(0,Math.floor((action.wall-n.wall)/1000));
       if(n.running&&n.phase!=='closed'&&elapsed) advance(n,n.now+elapsed);
-      n.wall=action.wall; break;
+      // Keep fractional milliseconds so frequent actions cannot slow the clock.
+      n.wall=n.running&&n.phase!=='closed'?n.wall+elapsed*1000:action.wall; break;
     }
     case 'TOGGLE_CLOCK': n.running=!n.running; break;
     case 'ADVANCE': if(Number.isFinite(action.to)) advance(n,action.to); break;
+    case 'NEAR_EXPIRY': {const g=currentGuest(n); if(g?.status==='offered') advance(n,Math.max(n.now,g.deadline!-2)); break;}
     case 'QUANTITY': if(n.phase==='collecting'&&Number.isFinite(action.value)) n.quantity=Math.max(0,Math.min(12,Math.floor(action.value))); break;
     case 'JOIN': {
       if(n.phase!=='collecting'||n.guests.some(g=>g.id===SELF&&g.status!=='left')) break;
@@ -120,6 +127,20 @@ export function reducer(state: Night, action: Action): Night {
     case 'PICKUP': {const g=n.guests.find(g=>g.id===action.id);if(g?.status!=='reserved'||n.now<PICKUP||n.now>=END)break;
       g.status='picked-up';n.bags.find(b=>b.id===g.bag)!.status='picked-up';n.pickups++;
       log(n,`Bag ${g.bag} collected. $5 received at pickup (demo).`);break;}
+    case 'VERIFY_CODE': {
+      const g=n.guests.find(g=>g.code===action.code.trim());
+      const sequence=(n.pickupResult?.sequence??0)+1;
+      let error='';
+      if(!g) error='No reservation matches that code. Check the four digits.';
+      else if(g.status==='picked-up') error=`Bag ${g.bag} was already collected. No second pickup recorded.`;
+      else if(n.now>=END||n.phase==='closed') error='Pickup is closed. No pickup or payment recorded.';
+      else if(g.status!=='reserved') error='That code has no active reservation.';
+      else if(n.now<PICKUP) error='Pickup opens at 7:30 PM. No pickup recorded.';
+      if(error) {n.pickupResult={ok:false,text:error,sequence};break;}
+      const collected=reducer(n,{type:'PICKUP',id:g!.id});
+      collected.pickupResult={ok:true,text:`Bag ${g!.bag} collected · $5 received at pickup.`,sequence};
+      return collected;
+    }
     case 'NEXT_NIGHT': if(n.phase==='closed') return createNight('standard',n.wall,n.history,n.day+1);break;
     case 'THREE_MISSES': {
       // Three complete no-surplus nights, using the exact public transitions.
@@ -137,6 +158,8 @@ export function timeLabel(seconds: number) {
   return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
 }
 export function countdown(seconds: number) {const s=Math.max(0,Math.ceil(seconds));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
+export function dateLabel(day: number) {return new Intl.DateTimeFormat('en-US',{weekday:'long',month:'long',day:'numeric',timeZone:'UTC'}).format(new Date(Date.UTC(2026,8,day)));}
+export const bagLabel=(id:number)=>`Bag ${String(id).padStart(2,'0')}`;
 
 export const STORAGE_KEY='sunrise-night-v1';
 export function restore(raw: string | null, wall=Date.now()): Night {
@@ -146,6 +169,13 @@ export function restore(raw: string | null, wall=Date.now()): Night {
     if(n.version!==1||!Number.isFinite(n.now)||n.now<START||n.now>END||!Number.isFinite(n.wall)||!Array.isArray(n.guests)||!Array.isArray(n.bags)||!Array.isArray(n.events)||!n.history||!['collecting','allocating','closed'].includes(n.phase)) throw Error('Invalid state');
     if(n.guests.some(g=>!g.id||!Number.isFinite(g.joined)||!Number.isFinite(g.boost)||!['waiting','offered','reserved','picked-up','declined','expired','left','unserved','no-show'].includes(g.status))) throw Error('Invalid guest');
     if(new Set(n.guests.map(g=>g.id)).size!==n.guests.length||n.bags.length!==(n.confirmed??0))throw Error('Invalid inventory');
+    if(!Number.isInteger(n.day)||typeof n.running!=='boolean'||!Number.isFinite(n.quantity)||n.quantity<0||n.quantity>12||!Number.isInteger(n.confirmations)||!Number.isInteger(n.pickups))throw Error('Invalid evening');
+    if(n.guests.some(g=>g.status==='offered'&&(!Number.isFinite(g.deadline)||g.deadline!>END)))throw Error('Invalid deadline');
+    if(n.bags.some(b=>!Number.isInteger(b.id)||!['available','offered','reserved','picked-up','remaining'].includes(b.status)))throw Error('Invalid bag');
+    if(new Set(n.bags.map(b=>b.id)).size!==n.bags.length)throw Error('Duplicate bag');
+    if(n.guests.some(g=>['offered','reserved','picked-up','no-show'].includes(g.status)&&!n.bags.some(b=>b.id===g.bag&&b.guest===g.id)))throw Error('Invalid reservation');
+    // Migrate the old presentation snapshot without restoring spent credits.
+    n.guests.forEach(g=>{if(g.offeredOnce)g.boost=0;});
     return reducer(n,{type:'TICK',wall});
   } catch {return createNight('standard',wall);}
 }
