@@ -9,13 +9,13 @@ const responseSchema = {
   properties: {
     observation: {
       type: 'string',
-      maxLength: 180,
-      description: 'A cautious interpretation without numbers, causation, certainty, or prediction.',
+      maxLength: 140,
+      description: 'One short, plain-English sentence a store manager can understand immediately.',
     },
     experiment: {
       type: 'string',
-      maxLength: 180,
-      description: 'One small, reversible operational experiment without changing inventory or allocation decisions.',
+      maxLength: 140,
+      description: 'One short, concrete sentence proposing a small, reversible physical-count timing test.',
     },
   },
   required: ['observation', 'experiment'],
@@ -30,9 +30,9 @@ function validInterpretation(value: unknown): value is {observation: string; exp
     typeof candidate.observation === 'string' &&
     typeof candidate.experiment === 'string' &&
     candidate.observation.length > 20 &&
-    candidate.observation.length <= 180 &&
+    candidate.observation.length <= 140 &&
     candidate.experiment.length > 20 &&
-    candidate.experiment.length <= 180 &&
+    candidate.experiment.length <= 140 &&
     !forbidden.test(candidate.observation) &&
     !forbidden.test(candidate.experiment)
   );
@@ -70,6 +70,10 @@ export async function createMerchantInsight(apiKey = process.env.GEMINI_API_KEY)
           'Application code has already calculated the supplied facts. Do not add, repeat, estimate, or transform any number or business metric.',
           'Return one cautious observation and one small, reversible experiment.',
           'Use language such as may, might, coincided, consider, or test. Do not claim causation, certainty, prediction, or an optimal action.',
+          'Write one short sentence per field in plain English for a busy store manager.',
+          'Prefer concrete words such as Wednesday, physical count, earlier, and later when the supplied facts support them.',
+          'Avoid abstract wording such as temporal boundary, implementation, process, period, presence, or shift in timing.',
+          'Do not use numbers in either field; the application displays the exact calculated evidence separately.',
           'Do not recommend how many bags to confirm. Do not change inventory confirmation, allocation, fairness, priority, pricing, reservations, pickup, or revenue.',
           'The only appropriate experiment here concerns when staff perform their physical count.',
         ].join(' '),

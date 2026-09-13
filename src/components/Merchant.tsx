@@ -18,7 +18,7 @@ export function Merchant({night:n,act}:{night:Night;act:(a:Action)=>void}) {
       <ol className="merchant-steps"><li><strong>01</strong><span>Count & confirm</span></li><li><strong>02</strong><span>Automatic offers & reassignment</span></li><li><strong>03</strong><span>Verify pickups</span></li></ol>
     </>:<>
       <div className="merchant-impact"><div><Check size={18}/><strong>{n.confirmations} inventory confirmation</strong><span>No manual reassignment</span></div><small>{n.pickups} pickup {n.pickups===1?'checkoff':'checkoffs'} · Staff count, pack, and hand over</small></div>
-      {closed?<><Results night={n}/><MerchantInsight/></>:<div className="live-summary" aria-label="Live inventory totals"><Metric value={n.confirmed??0} label="confirmed"/><Metric value={s.held} label="live offers"/><Metric value={s.reserved} label="reserved"/><Metric value={s.picked} label="collected"/><Metric value={`$${s.revenue}`} label="received at pickup"/></div>}
+      {closed?<><Results night={n}/><MerchantInsight/></>:<div className="live-summary" aria-label="Live inventory totals"><Metric value={n.confirmed??0} label="confirmed" tone="brand"/><Metric value={s.held} label="live offers" tone="live"/><Metric value={s.reserved} label="reserved" tone="reserved"/><Metric value={s.picked} label="collected" tone="success"/><Metric value={`$${s.revenue}`} label="received at pickup" tone="success"/></div>}
       {!closed&&s.available>0&&<p className="honest-note"><strong>{s.available} {s.available===1?'bag':'bags'} unallocated.</strong> {n.now>LAST_OFFER?'Too little pickup time for another offer.':waiting(n).length===0?'No eligible guests remain. Distribution can’t create demand.':'Waiting for an eligible guest.'}</p>}
       <div className="operations-grid"><section aria-label="Confirmed bag inventory"><div className="section-title"><h2>{closed?'Bag outcomes':'Tonight’s bags'}</h2><span>{closed?'Physical inventory, final status':'Offer → reserve → collect'}</span></div><div className="bag-list">{n.bags.length===0?<p className="empty-state">No surplus. No offers sent or commitments made.</p>:n.bags.map(b=><BagRow key={b.id} bag={b} night={n}/>)}</div></section>
       {!closed&&<aside className="pickup-workspace">{s.claimed>0?<Pickup night={n} act={act}/>:<div className="automation-note"><PackageCheck size={24}/><h2>{s.held?'No action needed.':'No pickups pending.'}</h2><p>{s.held?'Offers are out. The software handles responses and reassignment. Return when guests arrive.':'Unclaimed bags stay with the store. Results settle at 8:00 PM.'}</p></div>}</aside>}
@@ -29,14 +29,14 @@ export function Merchant({night:n,act}:{night:Night;act:(a:Action)=>void}) {
   </section>;
 }
 
-function Metric({value,label}:{value:string|number;label:string}) {
-  return <div><strong key={value} className="metric-enter">{value}</strong><span>{label}</span></div>;
+function Metric({value,label,tone='neutral'}:{value:string|number;label:string;tone?:'neutral'|'brand'|'live'|'reserved'|'success'|'warning'}) {
+  return <div className={`metric metric-${tone}`}><strong key={value} className="metric-enter">{value}</strong><span>{label}</span></div>;
 }
 function BagRow({bag:b,night:n}:{bag:Bag;night:Night}) {
   const g=n.guests.find(g=>g.id===b.guest);
   const status=b.status==='remaining'?(g?.status==='no-show'?'No-show':'Unclaimed'):b.status==='picked-up'?'Collected':b.status==='reserved'?'Reserved':b.status==='offered'?'Offer pending':'Unallocated';
   const step=b.status==='picked-up'?3:b.status==='reserved'?2:b.status==='offered'?1:0;
-  return <div className={`bag-row ${b.status}`}>
+  return <div className={`bag-row ${b.status} ${g?.status==='no-show'?'no-show':''} ${b.previous?'reassigned':''}`}>
     <span className="bag-number">{String(b.id).padStart(2,'0')}</span>
     <div className="bag-change" key={`${b.status}-${b.guest}`}>
       <div className="bag-recipient"><strong>{bagLabel(b.id)}</strong><span>{g?(g.id==='alex'?'Alex · demo consumer':g.label):'With the store'}</span>
@@ -59,7 +59,7 @@ function Activity({night:n}:{night:Night}) {
 }
 function Results({night:n}:{night:Night}) {
   const s=stats(n);
-  return <section className="results" aria-label="Tonight’s demo results"><div className="result-head"><div><p>Received at pickup · Demo</p><strong className="revenue metric-enter">${s.revenue}</strong><p>{s.picked} completed {s.picked===1?'pickup':'pickups'} × $5. Reservations alone earn nothing.</p></div><div className="sell-through"><strong>{n.confirmed?`${s.sellThrough}%`:'—'}</strong><p>Confirmed-surplus sell-through</p><small>Collected ÷ confirmed bags</small></div></div><div className="outcome-strip" aria-hidden="true">{n.bags.map(b=><span key={b.id} className={b.status==='picked-up'?'collected':''}/>)}</div><div className="result-counts"><Metric value={n.confirmed??0} label="confirmed"/><Metric value={s.claimed} label="claimed"/><Metric value={s.picked} label="collected"/><Metric value={s.noShows} label="no-shows"/><Metric value={s.remaining} label="remaining"/></div><p className="result-note">{s.remaining>0?`${s.remaining} ${s.remaining===1?'bag remains':'bags remain'} with the store, including ${s.noShows} ${s.noShows===1?'no-show':'no-shows'}. No pickup, no revenue.`:n.confirmed===0?'No surplus tonight. Guests who waited without an offer earn a priority credit.':'Every confirmed bag was collected.'}</p></section>;
+  return <section className="results" aria-label="Tonight’s demo results"><div className="result-head"><div><p>Received at pickup · Demo</p><strong className="revenue metric-enter">${s.revenue}</strong><p>{s.picked} completed {s.picked===1?'pickup':'pickups'} × $5. Reservations alone earn nothing.</p></div><div className="sell-through"><strong>{n.confirmed?`${s.sellThrough}%`:'—'}</strong><p>Confirmed-surplus sell-through</p><small>Collected ÷ confirmed bags</small></div></div><div className="outcome-strip" aria-hidden="true">{n.bags.map(b=>{const guest=n.guests.find(g=>g.id===b.guest);return <span key={b.id} className={b.status==='picked-up'?'collected':guest?.status==='no-show'?'missed':'remaining'}/>})}</div><div className="result-counts"><Metric value={n.confirmed??0} label="confirmed" tone="brand"/><Metric value={s.claimed} label="claimed" tone="reserved"/><Metric value={s.picked} label="collected" tone="success"/><Metric value={s.noShows} label="no-shows" tone={s.noShows?'warning':'neutral'}/><Metric value={s.remaining} label="remaining" tone={s.remaining?'warning':'neutral'}/></div><p className="result-note">{s.remaining>0?`${s.remaining} ${s.remaining===1?'bag remains':'bags remain'} with the store, including ${s.noShows} ${s.noShows===1?'no-show':'no-shows'}. No pickup, no revenue.`:n.confirmed===0?'No surplus tonight. Guests who waited without an offer earn a priority credit.':'Every confirmed bag was collected.'}</p></section>;
 }
 
 

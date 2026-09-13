@@ -23,7 +23,7 @@ export function Consumer({night:n,act,onDemo}:{night:Night;act:(a:Action)=>void;
   if(me?.status==='no-show'){title='The pickup window closed.';description='Your bag wasn’t collected. It remains with Sunrise; no payment was taken.';}
   if(me?.status==='unserved'||(!joined&&n.phase==='closed')){title=n.confirmed===0?'No surplus tonight.':'Tonight’s waitlist is closed.';description=n.confirmed===0?'The bakery counted no leftover bags. No offers or reservations were made.':'Pickup has ended. Some evenings there aren’t enough bags for everyone.';}
   if(!joined&&n.phase==='allocating'){title='Tonight’s list is closed.';description='Surplus has been counted. Join a future evening before the count.';}
-  return <section className={`consumer-layout ${compact?'compact':''} ${joined?'has-status':''}`} aria-label="Sunrise Bakery waitlist">
+  return <section className={`consumer-layout ${compact?'compact':''} ${joined?'has-status':''} consumer-state-${me?.status??n.phase}`} aria-label="Sunrise Bakery waitlist">
     <aside className="bakery-story">
       {!compact&&<figure className="bakery-photo"><img src="/bakery.png" width="1448" height="1086" alt="Golden croissants and rustic bread on a bakery counter"/><figcaption>A little of today, for your evening. <span>Illustrative photo</span></figcaption></figure>}
       <div className="store-details"><p className="eyebrow">Your store tonight</p><h2>Sunrise Bakery</h2><p className="store-address"><MapPin size={16}/>10400 NE 4th St, Bellevue</p>

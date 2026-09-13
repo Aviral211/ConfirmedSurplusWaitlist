@@ -41,9 +41,9 @@ export function MerchantInsight() {
 
     {typeof state === 'object' && state.status === 'ready' && <div className="insight-content" aria-live="polite">
       <small>{state.datasetLabel}</small>
-      <div><strong>Observation</strong><p>{state.observation}</p></div>
-      <div><strong>Evidence</strong><p>{state.evidence}</p></div>
-      <div><strong>Suggested experiment</strong><p>{state.experiment}</p></div>
+      <div className="insight-interpretation"><strong>Observation</strong><p>{state.observation}</p></div>
+      <div className="insight-evidence-row"><strong>Evidence</strong><p>{state.evidence}</p></div>
+      <div className="insight-interpretation"><strong>Suggested experiment</strong><p>{state.experiment}</p></div>
     </div>}
 
     {typeof state === 'object' && state.status !== 'ready' && <div className="insight-content insight-unavailable" role="status">
