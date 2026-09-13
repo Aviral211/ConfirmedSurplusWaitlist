@@ -23,3 +23,12 @@
 @keyframes state-in{from{opacity:.4;transform:translateY(6px)}to{opacity:1;transform:none}}@keyframes number-in{from{opacity:.35;transform:translateY(4px)}to{opacity:1;transform:none}}@keyframes ticket-in{from{opacity:.35;transform:translateY(-8px) scaleY(.96)}to{opacity:1;transform:none}}@keyframes bag-transfer{from{background:#d8e3ce;transform:translateX(-9px)}to{background:transparent;transform:none}}@keyframes progress-in{from{transform:scaleX(.15)}to{transform:scaleX(1)}}@keyframes pickup-confirm{from{background:#d8e3ce}to{background:transparent}}@keyframes drawer-in{from{opacity:.5;transform:translateX(30px)}to{opacity:1;transform:none}}@keyframes backdrop-in{from{opacity:0}to{opacity:1}}
 @media(min-width:761px) and (max-width:1050px){.site-header{grid-template-columns:1fr auto 140px;gap:16px}.brand strong{font-size:23px}.role-nav{gap:24px}.merchant-layout{padding-inline:28px}.operations-grid{gap:24px;grid-template-columns:minmax(0,1.3fr) minmax(280px,1fr)}.pickup-workspace{padding-left:22px}.bag-transfer{max-width:200px;flex-wrap:wrap}.compact.consumer-layout{gap:32px;padding-inline:32px}.compact .consumer-content h1{font-size:34px}.merchant-impact>div{max-width:none}.merchant-impact small{max-width:225px}.is-closed .bag-recipient{display:block}.is-closed .bag-transfer{margin-top:4px!important}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Operational details remain secondary while staying readable at a glance. */
+.night-clock{font-size:14px;color:#595e56}
+.merchant-impact small,.section-title>span,.bag-transfer,.bag-status>small,.activity-preview,.activity time,.activity p,.result-head p,.sell-through small,.result-counts span,.result-note{color:#595e56}
+.merchant-impact small,.section-title>span,.bag-transfer,.bag-status>small,.activity time{font-size:12px}
+.activity-preview,.activity p,.sell-through small,.result-counts span,.result-note{font-size:13px}
+.result-head p{font-size:14px}
+.bag-change{animation-duration:1.15s}
+@keyframes bag-transfer{0%{background:#d8e3ce;transform:translateX(-9px)}42%{background:#d8e3ce;transform:none}100%{background:transparent;transform:none}}
