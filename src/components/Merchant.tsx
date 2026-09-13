@@ -1,6 +1,7 @@
 import {useState, type FormEvent} from 'react';
 import {Check, Minus, Plus, ArrowRight, PackageCheck, ArrowRightLeft} from 'lucide-react';
 import {Action, Bag, Night, bagLabel, countdown, dateLabel, LAST_OFFER, PICKUP, stats, timeLabel, waiting} from '../model';
+import {MerchantInsight} from './MerchantInsight';
 
 export function Merchant({night:n,act}:{night:Night;act:(a:Action)=>void}) {
   const s=stats(n);
@@ -17,7 +18,7 @@ export function Merchant({night:n,act}:{night:Night;act:(a:Action)=>void}) {
       <ol className="merchant-steps"><li><strong>01</strong><span>Count & confirm</span></li><li><strong>02</strong><span>Automatic offers & reassignment</span></li><li><strong>03</strong><span>Verify pickups</span></li></ol>
     </>:<>
       <div className="merchant-impact"><div><Check size={18}/><strong>{n.confirmations} inventory confirmation</strong><span>No manual reassignment</span></div><small>{n.pickups} pickup {n.pickups===1?'checkoff':'checkoffs'} · Staff count, pack, and hand over</small></div>
-      {closed?<Results night={n}/>:<div className="live-summary" aria-label="Live inventory totals"><Metric value={n.confirmed??0} label="confirmed"/><Metric value={s.held} label="live offers"/><Metric value={s.reserved} label="reserved"/><Metric value={s.picked} label="collected"/><Metric value={`$${s.revenue}`} label="received at pickup"/></div>}
+      {closed?<><Results night={n}/><MerchantInsight/></>:<div className="live-summary" aria-label="Live inventory totals"><Metric value={n.confirmed??0} label="confirmed"/><Metric value={s.held} label="live offers"/><Metric value={s.reserved} label="reserved"/><Metric value={s.picked} label="collected"/><Metric value={`$${s.revenue}`} label="received at pickup"/></div>}
       {!closed&&s.available>0&&<p className="honest-note"><strong>{s.available} {s.available===1?'bag':'bags'} unallocated.</strong> {n.now>LAST_OFFER?'Too little pickup time for another offer.':waiting(n).length===0?'No eligible guests remain. Distribution can’t create demand.':'Waiting for an eligible guest.'}</p>}
       <div className="operations-grid"><section aria-label="Confirmed bag inventory"><div className="section-title"><h2>{closed?'Bag outcomes':'Tonight’s bags'}</h2><span>{closed?'Physical inventory, final status':'Offer → reserve → collect'}</span></div><div className="bag-list">{n.bags.length===0?<p className="empty-state">No surplus. No offers sent or commitments made.</p>:n.bags.map(b=><BagRow key={b.id} bag={b} night={n}/>)}</div></section>
       {!closed&&<aside className="pickup-workspace">{s.claimed>0?<Pickup night={n} act={act}/>:<div className="automation-note"><PackageCheck size={24}/><h2>{s.held?'No action needed.':'No pickups pending.'}</h2><p>{s.held?'Offers are out. The software handles responses and reassignment. Return when guests arrive.':'Unclaimed bags stay with the store. Results settle at 8:00 PM.'}</p></div>}</aside>}
